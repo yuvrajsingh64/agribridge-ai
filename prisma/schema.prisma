@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User & Profile ───────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  role      String @default("FARMER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farmerProfile  FarmerProfile?
+  produceListings ProduceListing[]
+  orders          Order[]
+  conversations   AIConversation[]
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+
+
+model FarmerProfile {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  village           String?
+  district          String
+  state             String
+  farmSizeAcres     Float
+  preferredLanguage String  @default("en")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("farmer_profiles")
+}
+
+// ─── Produce ──────────────────────────────────────────────────
+
+model ProduceListing {
+  id              String        @id @default(cuid())
+  farmerId        String
+  crop            String
+  variety         String?
+  quantity         Float
+  unit            String        @default("quintal")
+  qualityGrade    String
+  location        String
+  district        String
+  state           String
+  harvestDate     DateTime?
+  minimumPrice    Int           // in rupees (integer)
+  expectedPrice   Int?          // in rupees (integer)
+  sellingDeadline DateTime?
+  notes           String?
+  status          String @default("ACTIVE")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  farmer       User          @relation(fields: [farmerId], references: [id])
+  buyerMatches BuyerMatch[]
+  orders       Order[]
+
+  @@map("produce_listings")
+}
+
+
+
+// ─── Buyer ────────────────────────────────────────────────────
+
+model Buyer {
+  id                 String  @id @default(cuid())
+  name               String
+  contactPerson      String?
+  phone              String?
+  email              String?
+  location           String
+  district           String
+  state              String
+  rating             Float   @default(0)
+  verified           Boolean @default(false)
+  paymentWindowHours Int     @default(48)
+  description        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  offers       BuyerOffer[]
+  buyerMatches BuyerMatch[]
+  orders       Order[]
+
+  @@map("buyers")
+}
+
+model BuyerOffer {
+  id                   String      @id @default(cuid())
+  buyerId              String
+  crop                 String
+  pricePerUnit         Int         // in rupees per unit (integer)
+  minimumQuantity      Float
+  maximumQuantity      Float
+  unit                 String      @default("quintal")
+  qualityRequirements  String      // e.g. "Grade A", "Grade A/B"
+  validUntil           DateTime?
+  status               String @default("ACTIVE")
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  buyer Buyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@map("buyer_offers")
+}
+
+
+
+// ─── Matching ─────────────────────────────────────────────────
+
+model BuyerMatch {
+  id                String @id @default(cuid())
+  produceListingId  String
+  buyerId           String
+  buyerOfferId      String?
+  matchScore        Float
+  priceScore        Float
+  quantityScore     Float
+  qualityScore      Float
+  paymentScore      Float
+  distanceScore     Float
+  deadlineScore     Float
+  grossRevenue      Int     // in rupees (integer)
+  aiReasoning       String?
+  createdAt         DateTime @default(now())
+
+  produceListing ProduceListing @relation(fields: [produceListingId], references: [id])
+  buyer          Buyer          @relation(fields: [buyerId], references: [id])
+
+  @@map("buyer_matches")
+}
+
+// ─── Orders ───────────────────────────────────────────────────
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique
+  farmerId          String
+  buyerId           String
+  produceListingId  String
+  crop              String
+  quantity          Float
+  unit              String      @default("quintal")
+  pricePerUnit      Int         // in rupees (integer)
+  grossAmount       Int         // in rupees (integer)
+  status            String @default("PENDING")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  farmer         User           @relation(fields: [farmerId], references: [id])
+  buyer          Buyer          @relation(fields: [buyerId], references: [id])
+  produceListing ProduceListing @relation(fields: [produceListingId], references: [id])
+  payment        Payment?
+  transactions   Transaction[]
+
+  @@map("orders")
+}
+
+
+
+// ─── Payments ─────────────────────────────────────────────────
+
+model Payment {
+  id                     String        @id @default(cuid())
+  orderId                String        @unique
+  razorpayPaymentLinkId  String?
+  razorpayPaymentId      String?
+  razorpayShortUrl       String?
+  amount                 Int           // in paise (integer)
+  currency               String        @default("INR")
+  status                 String @default("PENDING")
+  referenceId            String?       @unique
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+
+
+// ─── Transactions ─────────────────────────────────────────────
+
+model Transaction {
+  id                String   @id @default(cuid())
+  orderId           String
+  transactionId     String   @unique  // Razorpay or internal ID
+  amount            Int      // in rupees (integer)
+  paymentMethod     String   @default("Razorpay")
+  status            String
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("transactions")
+}
+
+// ─── AI ───────────────────────────────────────────────────────
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id])
+  messages AIMessage[]
+  actions  AIAction[]
+
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id              String   @id @default(cuid())
+  conversationId  String
+  role            String   // "user" | "assistant" | "system"
+  content         String
+  structuredData  String?  // JSON string for structured responses
+  createdAt       DateTime @default(now())
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_messages")
+}
+
+model AIAction {
+  id              String   @id @default(cuid())
+  conversationId  String?
+  actionType      String   // e.g. "MATCH_BUYERS", "RECOMMEND", "CREATE_ORDER"
+  description     String
+  input           String?  // JSON
+  output          String?  // JSON
+  status          String   @default("COMPLETED")
+  createdAt       DateTime @default(now())
+
+  conversation AIConversation? @relation(fields: [conversationId], references: [id])
+
+  @@map("ai_actions")
+}
+
+// ─── Notifications ────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ORDER, PAYMENT
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}

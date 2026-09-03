@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: oklch(0.97 0.005 100);
+  --color-foreground: oklch(0.2 0.04 150);
+  
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.2 0.04 150);
+  
+  --color-primary: oklch(0.35 0.12 150);
+  --color-primary-foreground: oklch(0.97 0.005 100);
+  
+  --color-secondary: oklch(0.93 0.02 150);
+  --color-secondary-foreground: oklch(0.35 0.12 150);
+  
+  --color-muted: oklch(0.93 0.02 150);
+  --color-muted-foreground: oklch(0.55 0.04 150);
+  
+  --color-accent: oklch(0.78 0.16 85);
+  --color-accent-foreground: oklch(0.3 0.08 85);
+  
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-destructive-foreground: oklch(0.97 0 0);
+  
+  --color-border: oklch(0.88 0.02 150);
+  --color-input: oklch(0.88 0.02 150);
+  --color-ring: oklch(0.35 0.12 150);
+  
+  --radius: 0.5rem;
+  
+  --color-chart-1: oklch(0.55 0.15 150);
+  --color-chart-2: oklch(0.78 0.16 85);
+  --color-chart-3: oklch(0.55 0.2 260);
+  --color-chart-4: oklch(0.7 0.18 55);
+  --color-chart-5: oklch(0.6 0.2 25);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    scroll-behavior: smooth;
+    font-family: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+  }
+}
